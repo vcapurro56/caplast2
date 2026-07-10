@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ===== REVEAL ON SCROLL ===== */
-  const REVEAL_SELECTOR = ".feature-row, .section-head, .video-card, .prod-card, .uso-card, .benefit-card, .nosotros-card, .pricing, .contact-info, .contact-form";
+  const REVEAL_SELECTOR = ".feature-row, .section-head, .video-card, .prod-card, .uso-card, .benefit-card, .nosotros-card, .pricing, .contact-info, .contact-form, .hero-stat";
   const revealEls = document.querySelectorAll(REVEAL_SELECTOR);
   revealEls.forEach((el) => el.classList.add("reveal"));
   const revealObserver = new IntersectionObserver((entries) => {
