@@ -1,0 +1,186 @@
+import {defineField, defineType} from 'sanity'
+
+export default defineType({
+  name: 'producto',
+  title: 'Producto (Envase)',
+  type: 'document',
+  groups: [
+    {name: 'general', title: 'General', default: true},
+    {name: 'precio', title: 'Precio y stock'},
+    {name: 'detalle', title: 'Detalle / SEO'},
+  ],
+  fields: [
+    defineField({
+      name: 'nombre',
+      title: 'Nombre',
+      type: 'string',
+      group: 'general',
+      description: 'Ej: "Pote Apilable 500cc"',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'slug',
+      title: 'Slug (URL)',
+      type: 'slug',
+      group: 'general',
+      description:
+        'IMPORTANTE: debe coincidir con el nombre de la carpeta del producto en el sitio (ej. "envase-hdpe-500cc"). No cambiar sin avisar al desarrollador, o el link del producto se rompe.',
+      options: {source: 'nombre', maxLength: 96},
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'categoria',
+      title: 'Categoría',
+      type: 'reference',
+      group: 'general',
+      to: [{type: 'categoria'}],
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'material',
+      title: 'Material',
+      type: 'string',
+      group: 'general',
+      options: {
+        list: [
+          {title: 'HDPE / PEAD (Polietileno de alta densidad)', value: 'HDPE'},
+          {title: 'PET (Tereftalato de polietileno)', value: 'PET'},
+          {title: 'PP (Polipropileno)', value: 'PP'},
+          {title: 'PEBD (Polietileno de baja densidad)', value: 'PEBD'},
+        ],
+        layout: 'dropdown',
+      },
+      initialValue: 'HDPE',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'capacidadMl',
+      title: 'Capacidad (ml)',
+      type: 'number',
+      group: 'general',
+      description: 'Capacidad en mililitros/cc. Ej: 500. Para 1 litro, usar 1000.',
+      validation: (Rule) => Rule.required().positive(),
+    }),
+    defineField({
+      name: 'colores',
+      title: 'Colores disponibles',
+      type: 'array',
+      group: 'general',
+      of: [
+        {
+          type: 'object',
+          name: 'color',
+          fields: [
+            defineField({name: 'nombre', title: 'Nombre del color', type: 'string'}),
+            defineField({
+              name: 'hex',
+              title: 'Color (para mostrar en la web)',
+              type: 'color',
+              options: {disableAlpha: true},
+            }),
+          ],
+          preview: {select: {title: 'nombre'}},
+        },
+      ],
+    }),
+    defineField({
+      name: 'imagenes',
+      title: 'Imágenes',
+      type: 'array',
+      group: 'general',
+      of: [{type: 'image', options: {hotspot: true}}],
+      validation: (Rule) => Rule.required().min(1),
+    }),
+    defineField({
+      name: 'precioBase',
+      title: 'Precio base (CLP, por unidad, a volumen máximo)',
+      type: 'number',
+      group: 'precio',
+      description:
+        'Precio de referencia por unidad en el tramo de mayor volumen (5.000+ unidades). La calculadora aplica el multiplicador de cada tramo de cantidad sobre este valor.',
+      validation: (Rule) => Rule.required().positive(),
+    }),
+    defineField({
+      name: 'stock',
+      title: 'Stock disponible (unidades)',
+      type: 'number',
+      group: 'precio',
+      initialValue: 0,
+    }),
+    defineField({
+      name: 'disponible',
+      title: '¿Visible en el sitio?',
+      type: 'boolean',
+      group: 'precio',
+      description: 'Desactiva esto para ocultar el producto del catálogo sin borrarlo.',
+      initialValue: true,
+    }),
+    defineField({
+      name: 'esCapsula',
+      title: '¿Es formato "cápsula"?',
+      type: 'boolean',
+      group: 'precio',
+      description:
+        'Los potes de cápsula usan su propio set de tapas y no admiten sello. Actívalo solo para esos formatos.',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'tapasCompatibles',
+      title: 'Tapas compatibles',
+      type: 'array',
+      group: 'precio',
+      of: [{type: 'reference', to: [{type: 'tapaOpcion'}]}],
+    }),
+    defineField({
+      name: 'permiteSello',
+      title: '¿Admite sello de seguridad?',
+      type: 'boolean',
+      group: 'precio',
+      initialValue: true,
+    }),
+    defineField({
+      name: 'descripcionCorta',
+      title: 'Descripción corta (tarjeta de catálogo)',
+      type: 'text',
+      group: 'detalle',
+      rows: 2,
+      validation: (Rule) => Rule.required().max(220),
+    }),
+    defineField({
+      name: 'descripcionLarga',
+      title: 'Descripción larga (página del producto)',
+      type: 'text',
+      group: 'detalle',
+      rows: 5,
+    }),
+    defineField({
+      name: 'usos',
+      title: 'Usos / etiquetas',
+      type: 'array',
+      group: 'detalle',
+      of: [{type: 'string'}],
+      options: {layout: 'tags'},
+      description: 'Ej: Cosmética, Suplementos, Alimentos secos. Se muestran como chips en la página del producto.',
+    }),
+    defineField({
+      name: 'destacado',
+      title: '¿Destacado en la portada?',
+      type: 'boolean',
+      group: 'detalle',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'orden',
+      title: 'Orden dentro de la categoría',
+      type: 'number',
+      group: 'detalle',
+      initialValue: 0,
+    }),
+  ],
+  preview: {
+    select: {title: 'nombre', subtitle: 'material', media: 'imagenes.0'},
+    prepare({title, subtitle, media}) {
+      return {title, subtitle: subtitle ? `Material: ${subtitle}` : '', media}
+    },
+  },
+})

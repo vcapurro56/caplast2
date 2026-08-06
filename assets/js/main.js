@@ -1,56 +1,207 @@
-/* ===== CONFIG ===== */
-window.CAPLAST_WA_NUMBER = "56986071957";
-
-/* Precios base reales (a tramo 5000+, incluye ajuste de escala de fabrica) */
-window.CAPLAST_PRODUCTS = [
-  { key: "capsula200cc", name: "Pote de Cápsula 200cc", base: 144 },
-  { key: "capsula250cc", name: "Pote de Cápsula 250cc", base: 144 },
-  { key: "apilable250cc", name: "Pote Apilable 250cc", base: 221},
-  { key: "apilable500cc", name: "Pote Apilable 500cc", base: 292 },
-  { key: "apilable650cc", name: "Pote Apilable 650cc", base: 298 },
-  { key: "apilable1000cc", name: "Pote Apilable 1000cc", base: 320 },
-];
-
-window.CAPLAST_TIERS = [
-  { min: 0, max: 100, mult: 2.0 },
-  { min: 101, max: 500, mult: 1.5 },
-  { min: 501, max: 1000, mult: 1.25 },
-  { min: 1001, max: 4990, mult: 1.15 },
-  { min: 4991, max: Infinity, mult: 1.0 },
-];
-
-/* Precios base de tapas y sello (editables, mismo ajuste por tramo de cantidad) */
-window.CAPLAST_TAPAS = {
-  none: { label: "Sin tapa", base: 0 },
-  lisa: { label: "Tapa lisa", base: 122 },
-  estriada: { label: "Tapa estriada", base: 122 },
-  segurodenino: { label: "Tapa seguro de niño", base: 94 },
-  dispensadora: { label: "Tapa cápsula dispensadora", base: 78 },
+/* ===== DATOS DE RESPALDO =====
+   Solo se usan si Sanity todavía no está configurado (projectId de ejemplo)
+   o si la petición falla (sin internet, CMS caído). Así la web nunca queda
+   en blanco. Una vez conectado el CMS, todo esto se reemplaza por datos reales. */
+const CAPLAST_FALLBACK = {
+  tramos: [
+    {minimo: 0, maximo: 100, multiplicador: 2.0},
+    {minimo: 101, maximo: 500, multiplicador: 1.5},
+    {minimo: 501, maximo: 1000, multiplicador: 1.25},
+    {minimo: 1001, maximo: 4990, multiplicador: 1.15},
+    {minimo: 4991, maximo: null, multiplicador: 1.0},
+  ],
+  productos: [
+    {slug: "envase-hdpe-200cc", nombre: "Pote de Cápsula 200cc", categoria: {nombre: "Potes de cápsula", slug: "potes-de-capsula"}, orden: 0,
+      material: "HDPE", capacidadMl: 200, colores: [], imagenes: [{url: "/assets/img/capsula200.jpg"}],
+      descripcionCorta: "Ideal para cápsulas, suplementos, muestras o productos compactos que necesitan una presentación práctica y profesional.",
+      descripcionLarga: "El envase HDPE 200cc es la opción perfecta para quienes están comenzando a vender: cápsulas, muestras de producto, cremas concentradas o formatos de prueba.",
+      usos: ["Cápsulas", "Cremas", "Muestras", "Cosmetica"],
+      precioBase: 144, esCapsula: true, permiteSello: false,
+      tapasCompatibles: [{clave: "segurodenino", nombre: "Tapa seguro de niño", precioBase: 94}, {clave: "dispensadora", nombre: "Tapa cápsula dispensadora", precioBase: 78}]},
+    {slug: "pote-capsula-250cc", nombre: "Pote de Cápsula 250cc", categoria: {nombre: "Potes de cápsula", slug: "potes-de-capsula"}, orden: 1,
+      material: "HDPE", capacidadMl: 250, colores: [{nombre: "Negro"}], imagenes: [{url: "/assets/img/negro250.jpg"}],
+      descripcionCorta: "Formato práctico para cápsulas y productos pequeños, con una presentación diferenciada y compacta en color negro.",
+      descripcionLarga: "Formato práctico para cápsulas y productos pequeños, con una presentación diferenciada y compacta en color negro. Ideal para emprendedores que necesitan un formato distintivo, sólido y con buena presencia frente al cliente final.",
+      usos: ["Cápsulas", "Suplementos", "Muestras"],
+      precioBase: 144, esCapsula: true, permiteSello: false,
+      tapasCompatibles: [{clave: "segurodenino", nombre: "Tapa seguro de niño", precioBase: 94}, {clave: "dispensadora", nombre: "Tapa cápsula dispensadora", precioBase: 78}]},
+    {slug: "envase-hdpe-250cc", nombre: "Pote Apilable 250cc", categoria: {nombre: "Potes apilables", slug: "potes-apilables"}, orden: 0,
+      material: "HDPE", capacidadMl: 250, colores: [], imagenes: [{url: "/assets/img/pote250.jpg"}],
+      descripcionCorta: "Ideal para cremas, cosmética, alimentos secos y productos de menor tamaño.",
+      descripcionLarga: "El envase HDPE 250cc es uno de los formatos más versatiles de nuestro catálogo. Práctico para emprendedores que están lanzando su primera linea de productos.",
+      usos: ["Cosmetica", "Peluqueria", "Cremas", "Marcas propias"],
+      precioBase: 221, esCapsula: false, permiteSello: true,
+      tapasCompatibles: [{clave: "lisa", nombre: "Tapa lisa", precioBase: 122}, {clave: "estriada", nombre: "Tapa estriada", precioBase: 122}]},
+    {slug: "envase-hdpe-500cc", nombre: "Pote Apilable 500cc", categoria: {nombre: "Potes apilables", slug: "potes-apilables"}, orden: 1,
+      material: "HDPE", capacidadMl: 500, colores: [], imagenes: [{url: "/assets/img/pote500.jpg"}],
+      descripcionCorta: "Versátil para cosmética, suplementos, alimentos secos y productos capilares.",
+      descripcionLarga: "Un formato versatil para emprendedores y empresas que necesitan una presentación resistente, práctica y profesional. Ideal para cosmetica, suplementos, productos capilares, alimentos secos, proteínas y productos de limpieza.",
+      usos: ["Cosmetica", "Suplementos", "Alimentos secos", "Limpieza", "Capilares"],
+      precioBase: 292, esCapsula: false, permiteSello: true,
+      tapasCompatibles: [{clave: "lisa", nombre: "Tapa lisa", precioBase: 122}, {clave: "estriada", nombre: "Tapa estriada", precioBase: 122}]},
+    {slug: "envase-hdpe-650cc", nombre: "Pote Apilable 650cc", categoria: {nombre: "Potes apilables", slug: "potes-apilables"}, orden: 2,
+      material: "HDPE", capacidadMl: 650, colores: [], imagenes: [{url: "/assets/img/pote650.jpg"}],
+      descripcionCorta: "Buena opción para productos de mayor volumen con presentación profesional.",
+      descripcionLarga: "Cuando tu producto necesita más espacio sin perder practicidad, el envase HDPE 650cc es la eleccion adecuada. Pensado para marcas que ya validaron su producto y buscan ofrecer formatos de mayor rendimiento.",
+      usos: ["Suplementos", "Proteínas", "Alimentos secos", "Limpieza"],
+      precioBase: 298, esCapsula: false, permiteSello: true,
+      tapasCompatibles: [{clave: "lisa", nombre: "Tapa lisa", precioBase: 122}, {clave: "estriada", nombre: "Tapa estriada", precioBase: 122}]},
+    {slug: "envase-hdpe-1000cc", nombre: "Pote Apilable 1000cc", categoria: {nombre: "Potes apilables", slug: "potes-apilables"}, orden: 3,
+      material: "HDPE", capacidadMl: 1000, colores: [], imagenes: [{url: "/assets/img/litro1.jpg"}],
+      descripcionCorta: "Formato ideal para reposición, venta mayorista o productos de alto consumo.",
+      descripcionLarga: "El envase HDPE de 1 litro esta pensado para venta mayorista, reposición frecuente o productos de alto consumo. Resistente, apilable y con una presentación que transmite volumen y valor al cliente final.",
+      usos: ["Proteínas", "Suplementos", "Alimentos secos", "Marcas propias"],
+      precioBase: 320, esCapsula: false, permiteSello: true,
+      tapasCompatibles: [{clave: "lisa", nombre: "Tapa lisa", precioBase: 122}, {clave: "estriada", nombre: "Tapa estriada", precioBase: 122}]},
+  ],
+  sellos: [{clave: "con", nombre: "Con sello", precioBase: 71}],
+  config: {whatsappNumero: "56986071957"},
 };
-window.CAPLAST_SELLO = {
-  none: { label: "Sin sello", base: 0 },
-  con: { label: "Con sello", base: 71 },
-};
 
-/* Los potes de capsula (200cc y 250cc) usan tapas propias y no admiten sello */
-window.CAPLAST_CAPSULA_KEYS = ["capsula200cc", "capsula250cc"];
-window.CAPLAST_TAPAS_POR_TIPO = {
-  capsula: ["none", "segurodenino", "dispensadora"],
-  default: ["none", "lisa", "estriada"],
-};
+window.CAPLAST_DATA = null; // se llena en cargarDatosCaplast()
+
+async function cargarDatosCaplast() {
+  try {
+    const [productos, tapas, sellos, tramos, config] = await Promise.all([
+      CaplastCMS.getProductos(),
+      CaplastCMS.getTapas(),
+      CaplastCMS.getSellos(),
+      CaplastCMS.getTramosPrecio(),
+      CaplastCMS.getConfigSitio(),
+    ]);
+    if (!productos || productos.length === 0) throw new Error("Sin productos en el CMS todavía");
+    window.CAPLAST_DATA = {
+      productos,
+      tapas: tapas || [],
+      sellos: sellos || [],
+      tramos: tramos && tramos.length ? tramos : CAPLAST_FALLBACK.tramos,
+      config: config || CAPLAST_FALLBACK.config,
+    };
+  } catch (err) {
+    console.warn("[Caplast] No se pudo cargar el CMS, usando datos de respaldo.", err);
+    window.CAPLAST_DATA = CAPLAST_FALLBACK;
+  }
+}
 
 function caplastGetTier(qty) {
-  return window.CAPLAST_TIERS.find(t => qty >= t.min && qty <= t.max) || window.CAPLAST_TIERS[0];
+  const tramos = window.CAPLAST_DATA.tramos;
+  return (
+    tramos.find((t) => qty >= t.minimo && (t.maximo == null || qty <= t.maximo)) || tramos[0]
+  );
 }
 function caplastFormatCLP(n) {
   return "$" + Math.round(n).toLocaleString("es-CL");
 }
 function caplastWaLink(message) {
-  return "https://wa.me/" + window.CAPLAST_WA_NUMBER + "?text=" + encodeURIComponent(message);
+  const numero = window.CAPLAST_DATA.config.whatsappNumero || CAPLAST_FALLBACK.config.whatsappNumero;
+  return "https://wa.me/" + numero + "?text=" + encodeURIComponent(message);
+}
+function caplastImagenUrl(producto) {
+  return producto.imagenes && producto.imagenes[0] ? producto.imagenes[0].url : "";
 }
 
-/* ===== NAV MOBILE ===== */
-document.addEventListener("DOMContentLoaded", () => {
+/* ===== TARJETAS DE PRODUCTO (catálogo y destacados) ===== */
+function caplastProductCardHtml(p) {
+  return `
+    <div class="prod-card">
+      <a href="/productos/${p.slug}/" style="text-decoration:none; color:inherit;">
+        <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}"></div>
+        <div class="prod-body">
+          <h3>${p.nombre}</h3>
+          <p class="prod-cap"><strong>Capacidad:</strong> ${p.capacidadMl} cc<br>${p.descripcionCorta || ""}</p>
+        </div>
+      </a>
+      <div class="prod-body" style="border-top:none; padding-top:0;">
+        <div class="prod-ctas">
+          <a class="cta-calc" href="/productos/${p.slug}/">Ver producto</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+function caplastRelatedCardHtml(p) {
+  return `
+    <a class="prod-card" href="/productos/${p.slug}/">
+      <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}"></div>
+      <div class="prod-body">
+        <h4>${p.nombre}</h4>
+        <p class="prod-cap">${p.capacidadMl} cc</p>
+      </div>
+    </a>`;
+}
+
+function caplastRenderGrids() {
+  const productos = window.CAPLAST_DATA.productos;
+
+  document.querySelectorAll("[data-cms-grid]").forEach((el) => {
+    const categoriaSlug = el.dataset.categoriaSlug;
+    const soloDestacados = el.dataset.destacado === "true";
+    let lista = productos;
+    if (categoriaSlug) lista = lista.filter((p) => p.categoria && p.categoria.slug === categoriaSlug);
+    if (soloDestacados) lista = lista.filter((p) => p.destacado);
+    lista = [...lista].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    el.innerHTML = lista.map(caplastProductCardHtml).join("");
+  });
+
+  document.querySelectorAll("[data-cms-related]").forEach((el) => {
+    const excludeSlug = el.dataset.excludeSlug;
+    const relacionados = productos.filter((p) => p.slug !== excludeSlug).slice(0, 4);
+    el.innerHTML = relacionados.map(caplastRelatedCardHtml).join("");
+  });
+}
+
+/* ===== HIDRATACIÓN DE PÁGINA DE DETALLE DE PRODUCTO ===== */
+function caplastHydrateProductPage() {
+  const slug = document.body.dataset.productSlug;
+  if (!slug) return;
+  const producto = window.CAPLAST_DATA.productos.find((p) => p.slug === slug);
+  if (!producto) return;
+
+  const setText = (field, value) => {
+    const el = document.querySelector(`[data-cms-field="${field}"]`);
+    if (el) el.textContent = value;
+  };
+  const setHtml = (field, value) => {
+    const el = document.querySelector(`[data-cms-field="${field}"]`);
+    if (el) el.innerHTML = value;
+  };
+
+  setText("nombre", producto.nombre);
+  setText("categoria", producto.categoria ? producto.categoria.nombre : "");
+  setHtml(
+    "specs",
+    `<strong>Capacidad:</strong> ${producto.capacidadMl} cc &nbsp;|&nbsp; <strong>Material:</strong> ${producto.material}` +
+      (producto.colores && producto.colores.length === 1 ? ` &nbsp;|&nbsp; <strong>Color:</strong> ${producto.colores[0].nombre}` : "")
+  );
+  setText("descripcion", producto.descripcionLarga || producto.descripcionCorta || "");
+
+  const imgEl = document.querySelector('[data-cms-field="imagen"]');
+  if (imgEl) {
+    imgEl.src = caplastImagenUrl(producto);
+    imgEl.alt = producto.nombre;
+  }
+
+  const tagsEl = document.querySelector('[data-cms-field="tags"]');
+  if (tagsEl && producto.usos) {
+    tagsEl.innerHTML = producto.usos
+      .map((u) => `<span style="display:inline-block; background:var(--blanco); border:1px solid #E0DACB; color:var(--azul); font-size:12.5px; font-weight:600; padding:6px 14px; border-radius:20px; margin:0 6px 8px 0;">${u}</span>`)
+      .join("");
+  }
+
+  const calcLink = document.querySelector('[data-cms-field="calc-link"]');
+  if (calcLink) calcLink.href = `/calculadora/?producto=${producto.slug}`;
+
+  document.querySelectorAll("[data-wa-msg-cms]").forEach((el) => {
+    el.dataset.waMsg = el.dataset.waMsgCms.replace(/\{\{producto\}\}/g, producto.nombre);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await cargarDatosCaplast();
+  caplastRenderGrids();
+  caplastHydrateProductPage();
+
+  /* ===== NAV MOBILE ===== */
   const burgerBtn = document.getElementById("burger-btn");
   const navLinksEl = document.getElementById("nav-links");
   if (burgerBtn && navLinksEl) {
@@ -93,10 +244,10 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ===== CALCULATOR (si existe en la pagina) ===== */
   const calcProductSel = document.getElementById("calc-product");
   if (calcProductSel) {
-    window.CAPLAST_PRODUCTS.forEach(p => {
+    window.CAPLAST_DATA.productos.forEach(p => {
       const opt = document.createElement("option");
-      opt.value = p.key;
-      opt.textContent = p.name;
+      opt.value = p.slug;
+      opt.textContent = p.nombre;
       calcProductSel.appendChild(opt);
     });
 
@@ -119,39 +270,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const rowSello = document.getElementById("calc-row-sello");
     const selloField = selloSel ? selloSel.closest(".calc-field") : null;
 
+    const SIN_TAPA = {clave: "none", nombre: "Sin tapa", precioBase: 0};
+    const SIN_SELLO = {clave: "none", nombre: "Sin sello", precioBase: 0};
+
     function updateCalc() {
-      const product = window.CAPLAST_PRODUCTS.find(p => p.key === calcProductSel.value);
-      const esCapsula = product && window.CAPLAST_CAPSULA_KEYS.includes(product.key);
+      const product = window.CAPLAST_DATA.productos.find(p => p.slug === calcProductSel.value);
+      if (!product) return;
+
+      const opcionesTapa = [SIN_TAPA, ...(product.tapasCompatibles || [])];
 
       if (tapaSel) {
-        const tapaKeysValidas = window.CAPLAST_TAPAS_POR_TIPO[esCapsula ? "capsula" : "default"];
         const tapaValorPrevio = tapaSel.value;
         tapaSel.innerHTML = "";
-        tapaKeysValidas.forEach(k => {
+        opcionesTapa.forEach(t => {
           const opt = document.createElement("option");
-          opt.value = k;
-          opt.textContent = window.CAPLAST_TAPAS[k].label;
+          opt.value = t.clave;
+          opt.textContent = t.nombre;
           tapaSel.appendChild(opt);
         });
-        tapaSel.value = tapaKeysValidas.includes(tapaValorPrevio) ? tapaValorPrevio : "none";
+        tapaSel.value = opcionesTapa.some(t => t.clave === tapaValorPrevio) ? tapaValorPrevio : "none";
       }
       if (selloSel) {
-        selloSel.disabled = esCapsula;
-        if (esCapsula) selloSel.value = "none";
+        selloSel.disabled = !product.permiteSello;
+        if (!product.permiteSello) selloSel.value = "none";
       }
-      if (selloField) selloField.style.display = esCapsula ? "none" : "";
+      if (selloField) selloField.style.display = product.permiteSello ? "" : "none";
 
       const qty = parseInt(qtyInput.value) || 1;
       const tier = caplastGetTier(qty);
 
       const tapaKey = tapaSel ? tapaSel.value : "none";
       const selloKey = selloSel ? selloSel.value : "none";
-      const tapa = window.CAPLAST_TAPAS[tapaKey];
-      const sello = window.CAPLAST_SELLO[selloKey];
+      const tapa = opcionesTapa.find(t => t.clave === tapaKey) || SIN_TAPA;
+      const sello = selloKey === "none" ? SIN_SELLO : (window.CAPLAST_DATA.sellos.find(s => s.clave === selloKey) || SIN_SELLO);
 
-      const envaseUnit = Math.round(product.base * tier.mult);
-      const tapaUnit = Math.round(tapa.base * tier.mult);
-      const selloUnit = Math.round(sello.base * tier.mult);
+      const envaseUnit = Math.round(product.precioBase * tier.multiplicador);
+      const tapaUnit = Math.round(tapa.precioBase * tier.multiplicador);
+      const selloUnit = Math.round(sello.precioBase * tier.multiplicador);
       const unit = envaseUnit + tapaUnit + selloUnit;
       const total = unit * qty;
 
@@ -160,17 +315,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (breakdownEnvase) breakdownEnvase.textContent = `Precio envase: ${caplastFormatCLP(envaseUnit)} / un`;
       if (rowTapa) rowTapa.style.display = tapaKey === "none" ? "none" : "flex";
-      if (breakdownTapa && tapaKey !== "none") breakdownTapa.textContent = `Precio tapa (${tapa.label.toLowerCase()}): ${caplastFormatCLP(tapaUnit)} / un`;
+      if (breakdownTapa && tapaKey !== "none") breakdownTapa.textContent = `Precio tapa (${tapa.nombre.toLowerCase()}): ${caplastFormatCLP(tapaUnit)} / un`;
       if (rowSello) rowSello.style.display = selloKey === "none" ? "none" : "flex";
       if (breakdownSello && selloKey !== "none") breakdownSello.textContent = `Precio sello: ${caplastFormatCLP(selloUnit)} / un`;
 
       if (discountNote) {
-        discountNote.textContent = tier.mult < 2.0
-          ? "\u2713 Descuento por volumen aplicado a tu pedido"
+        discountNote.textContent = tier.multiplicador < 2.0
+          ? "✓ Descuento por volumen aplicado a tu pedido"
           : "Ingresa mas unidades para acceder a mejor precio por volumen";
       }
       if (waBtn) {
-        const msg = `Hola, quiero cotizar envases Caplast. Me interesa el envase ${product.name}, en cantidad de ${qty} unidades. Quiero ${tapa.label.toLowerCase()} y ${sello.label.toLowerCase()}. El precio estimado que vi en la web fue de ${caplastFormatCLP(total)}.`;
+        const msg = `Hola, quiero cotizar envases Caplast. Me interesa el envase ${product.nombre}, en cantidad de ${qty} unidades. Quiero ${tapa.nombre.toLowerCase()} y ${sello.nombre.toLowerCase()}. El precio estimado que vi en la web fue de ${caplastFormatCLP(total)}.`;
         waBtn.href = caplastWaLink(msg);
       }
       quickBtns.forEach(b => b.classList.toggle("active", parseInt(b.dataset.qty) === qty));
