@@ -100,20 +100,30 @@ function caplastImagenUrl(producto) {
   return producto.imagenes && producto.imagenes[0] ? producto.imagenes[0].url : "";
 }
 
+/* Precio unitario más bajo posible (tramo de mayor volumen), solo el envase */
+function caplastPrecioDesde(p) {
+  if (!p.precioBase) return "";
+  const minMult = Math.min(...window.CAPLAST_DATA.tramos.map((t) => t.multiplicador));
+  return caplastFormatCLP(p.precioBase * minMult);
+}
+
 /* ===== TARJETAS DE PRODUCTO (catálogo y destacados) ===== */
 function caplastProductCardHtml(p) {
+  const desde = caplastPrecioDesde(p);
   return `
     <div class="prod-card">
-      <a href="/productos/${p.slug}/" style="text-decoration:none; color:inherit;">
-        <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}"></div>
+      <a href="/productos/${p.slug}/">
+        <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}" width="500" height="500" loading="lazy"></div>
         <div class="prod-body">
           <h3>${p.nombre}</h3>
           <p class="prod-cap"><strong>Capacidad:</strong> ${p.capacidadMl} cc<br>${p.descripcionCorta || ""}</p>
+          ${desde ? `<p class="prod-price">Desde <strong>${desde}</strong> c/u <span>según volumen</span></p>` : ""}
         </div>
       </a>
-      <div class="prod-body" style="border-top:none; padding-top:0;">
+      <div class="prod-body prod-foot">
         <div class="prod-ctas">
-          <a class="cta-calc" href="/productos/${p.slug}/">Ver producto</a>
+          <a href="/productos/${p.slug}/">Ver producto</a>
+          <a href="/calculadora/?producto=${p.slug}">Calcular precio</a>
         </div>
       </div>
     </div>`;
@@ -122,9 +132,9 @@ function caplastProductCardHtml(p) {
 function caplastRelatedCardHtml(p) {
   return `
     <a class="prod-card" href="/productos/${p.slug}/">
-      <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}"></div>
+      <div class="prod-img"><img src="${caplastImagenUrl(p)}" alt="${p.nombre}" width="500" height="500" loading="lazy"></div>
       <div class="prod-body">
-        <h4>${p.nombre}</h4>
+        <h3>${p.nombre}</h3>
         <p class="prod-cap">${p.capacidadMl} cc</p>
       </div>
     </a>`;
@@ -184,7 +194,7 @@ function caplastHydrateProductPage() {
   const tagsEl = document.querySelector('[data-cms-field="tags"]');
   if (tagsEl && producto.usos) {
     tagsEl.innerHTML = producto.usos
-      .map((u) => `<span style="display:inline-block; background:var(--blanco); border:1px solid #E0DACB; color:var(--azul); font-size:12.5px; font-weight:600; padding:6px 14px; border-radius:20px; margin:0 6px 8px 0;">${u}</span>`)
+      .map((u) => `<span class="tag">${u}</span>`)
       .join("");
   }
 
@@ -206,30 +216,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   const navLinksEl = document.getElementById("nav-links");
   if (burgerBtn && navLinksEl) {
     burgerBtn.addEventListener("click", () => {
-      burgerBtn.classList.toggle("open");
-      navLinksEl.classList.toggle("open");
+      const abierto = navLinksEl.classList.toggle("open");
+      burgerBtn.classList.toggle("open", abierto);
+      burgerBtn.setAttribute("aria-expanded", abierto ? "true" : "false");
     });
     navLinksEl.querySelectorAll("a").forEach(a => {
       a.addEventListener("click", () => {
         burgerBtn.classList.remove("open");
         navLinksEl.classList.remove("open");
+        burgerBtn.setAttribute("aria-expanded", "false");
       });
     });
   }
 
-  /* ===== REVEAL ON SCROLL ===== */
-  const REVEAL_SELECTOR = ".feature-row, .section-head, .video-card, .prod-card, .uso-card, .benefit-card, .nosotros-card, .pricing, .contact-info, .contact-form, .hero-stat";
-  const revealEls = document.querySelectorAll(REVEAL_SELECTOR);
-  revealEls.forEach((el) => el.classList.add("reveal"));
-  const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("reveal-visible");
-        revealObserver.unobserve(entry.target);
-      }
+  /* ===== VIDEOS DE FÁBRICA =====
+     El recuadro con botón tapa el video: al hacer clic se oculta y el video
+     empieza. Si el archivo no existe todavía, se avisa en vez de mostrar un
+     botón que no hace nada. */
+  document.querySelectorAll(".video-frame").forEach((frame) => {
+    const video = frame.querySelector("video");
+    const placeholder = frame.querySelector(".video-placeholder");
+    if (!video || !placeholder) return;
+    const sources = video.querySelectorAll("source");
+    const marcarNoDisponible = () => {
+      placeholder.classList.add("video-unavailable");
+      placeholder.innerHTML = '<p>Video disponible próximamente</p>';
+    };
+    if (sources.length) sources[sources.length - 1].addEventListener("error", marcarNoDisponible);
+    video.addEventListener("error", marcarNoDisponible);
+    // El error pudo ocurrir antes de cargar los datos del CMS
+    if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) marcarNoDisponible();
+    const reproducir = () => {
+      if (placeholder.classList.contains("video-unavailable")) return;
+      placeholder.hidden = true;
+      video.play().catch(() => {});
+    };
+    placeholder.addEventListener("click", reproducir);
+    placeholder.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reproducir(); }
     });
-  }, { threshold: 0.1, rootMargin: "0px 0px -40px 0px" });
-  revealEls.forEach(el => revealObserver.observe(el));
+  });
 
   /* ===== ACTIVE NAV LINK ===== */
   const navLinks = document.querySelectorAll(".nav-links a[href]");
@@ -352,8 +378,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ===== FORMSPREE AJAX (contacto) ===== */
   const contactForm = document.getElementById("contact-form");
   if (contactForm) {
+    /* Validación en línea: el error aparece bajo el campo al salir de él
+       y, si el envío falla, el foco va al primer campo con problema. */
+    contactForm.noValidate = true;
+    const mensajeError = (campo) => {
+      const v = campo.validity;
+      if (v.valueMissing) return "Este campo es obligatorio.";
+      if (v.typeMismatch && campo.type === "email") return "Escribe un correo válido, por ejemplo nombre@correo.cl.";
+      if (v.rangeUnderflow) return "Ingresa una cantidad mayor a cero.";
+      return campo.validationMessage;
+    };
+    const validarCampo = (campo) => {
+      const idError = `${campo.id}-error`;
+      let error = document.getElementById(idError);
+      if (campo.checkValidity()) {
+        campo.removeAttribute("aria-invalid");
+        campo.removeAttribute("aria-describedby");
+        if (error) error.remove();
+        return true;
+      }
+      if (!error) {
+        error = document.createElement("p");
+        error.className = "field-error";
+        error.id = idError;
+        campo.insertAdjacentElement("afterend", error);
+        campo.setAttribute("aria-describedby", idError);
+      }
+      error.textContent = mensajeError(campo);
+      campo.setAttribute("aria-invalid", "true");
+      return false;
+    };
+    const camposValidables = contactForm.querySelectorAll("input[id], select[id], textarea[id]");
+    camposValidables.forEach((campo) => {
+      campo.addEventListener("blur", () => { if (campo.value || campo.hasAttribute("aria-invalid")) validarCampo(campo); });
+      campo.addEventListener("input", () => { if (campo.hasAttribute("aria-invalid")) validarCampo(campo); });
+    });
+
     contactForm.addEventListener("submit", function (e) {
       e.preventDefault();
+      const invalidos = [...camposValidables].filter((campo) => !validarCampo(campo));
+      if (invalidos.length) { invalidos[0].focus(); return; }
       const data = new FormData(contactForm);
       const successEl = document.querySelector("[data-fs-success]");
       const submitBtn = contactForm.querySelector("[data-fs-submit-btn]");
